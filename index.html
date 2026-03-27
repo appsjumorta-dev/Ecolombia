@@ -783,10 +783,18 @@
 
 <!-- HEADER -->
 <header>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
   <div style="display:flex;flex-direction:column;gap:.15rem;">
     <div class="logo">Ecolombia <span>/ Monitor del Ecosistema Productivo</span></div>
     <div style="font-family:'Space Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.08em;">Creado por <span style="color:var(--text);font-weight:700;">Julio Moreno Taylor</span> · Docente</div>
   </div>
+  </div>
+  <button id="ia-config-btn" onclick="openIAConfig()" style="
+    font-family:'Space Mono',monospace; font-size:.75rem; font-weight:700;
+    padding:.45em 1em; border-radius:999px; cursor:pointer; transition:all .2s;
+    border:1.5px solid rgba(255,255,255,.15); background:var(--surface2); color:var(--muted);
+    white-space:nowrap;
+  ">⚙️ IA</button>
   <nav class="sector-tabs">
     <button class="stab agro active" onclick="switchSector('agro')">🌱 Agroindustrial</button>
     <button class="stab ind"         onclick="switchSector('ind')">🏭 Industrial</button>
@@ -2819,7 +2827,15 @@ function closeCasoModal(e) {
 }
 
 // ─── IA ASESOR ───
-const WORKER_URL = 'https://yoemprendo.aulas-espiritu.workers.dev/';
+const WORKER_STORAGE_KEY = 'ecolombia_worker_url';
+
+function getWorkerUrl() {
+  return localStorage.getItem(WORKER_STORAGE_KEY) || '';
+}
+
+function saveWorkerUrl(url) {
+  localStorage.setItem(WORKER_STORAGE_KEY, url.trim().replace(/\/+$/, ''));
+}
 
 const sectorContexts = {
   agro: "Eres un asesor de empresas agroindustriales colombianas para estudiantes. Usa ejemplos de café, flores, palma. Responde en español, máximo 2 párrafos.",
@@ -2843,7 +2859,13 @@ async function sendIA(sector) {
   ];
 
   try {
-    const res = await fetch(WORKER_URL, {
+    const workerUrl = getWorkerUrl();
+    if (!workerUrl) {
+      showTyping(sector, false);
+      addMsg(sector, '⚙️ Primero configura la URL del servidor IA. Haz clic en el botón <b>⚙️ IA</b> del encabezado.', 'bot');
+      return;
+    }
+    const res = await fetch(workerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2862,7 +2884,7 @@ async function sendIA(sector) {
 
   } catch(err) {
     showTyping(sector, false);
-    addMsg(sector, '⚠️ Error: ' + err.message + ' | URL: ' + WORKER_URL, 'bot');
+    addMsg(sector, '⚠️ Error de conexión: ' + err.message + '. Verifica la URL del servidor en ⚙️ IA.', 'bot');
   }
 }
 
@@ -3077,6 +3099,155 @@ setTimeout(()=>{
   renderQuiz('agro'); renderQuiz('ind'); renderQuiz('serv'); renderQuiz('tech');
   initDirectorio(); buildCasos();
 },100);
+</script>
+
+<!-- MODAL CONFIGURACIÓN IA -->
+<div id="ia-config-modal" style="
+  display:none; position:fixed; inset:0; z-index:2000;
+  background:rgba(0,0,0,.85); backdrop-filter:blur(8px);
+  align-items:center; justify-content:center; padding:1rem;
+">
+  <div style="
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; max-width:480px; width:100%; overflow:hidden;
+    animation:fadeIn .3s ease;
+  ">
+    <!-- Header -->
+    <div style="padding:1.4rem 1.8rem; border-bottom:1px solid var(--border);
+      background:linear-gradient(135deg,rgba(33,150,243,.15),transparent);
+      display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;">⚙️ Configurar Asesor IA</div>
+        <div style="font-size:.85rem;color:var(--muted);margin-top:.2rem;">Conecta el servidor Gemini para activar el asesor</div>
+      </div>
+      <button onclick="closeIAConfig()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:1.5rem 1.8rem;">
+      <!-- Steps -->
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.4rem;">
+        <div style="display:flex;gap:.75rem;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#2196f3;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;">1</div>
+          <div style="font-size:.9rem;color:var(--muted);line-height:1.5;">Ve a tu <strong style="color:var(--text)">Worker de Cloudflare</strong> y copia la URL (ej: <code style="background:var(--surface2);padding:.1em .4em;border-radius:4px;font-size:.8rem;">https://tuapp.workers.dev</code>)</div>
+        </div>
+        <div style="display:flex;gap:.75rem;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#2196f3;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;">2</div>
+          <div style="font-size:.9rem;color:var(--muted);line-height:1.5;">Pégala aquí y haz clic en <strong style="color:var(--text)">Conectar</strong></div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <input id="ia-url-input" type="url"
+        placeholder="https://yoemprendo.aulas-espiritu.workers.dev"
+        style="width:100%;background:var(--surface2);border:1.5px solid var(--border);
+          border-radius:10px;padding:.85rem 1rem;color:var(--text);
+          font-family:'Nunito',sans-serif;font-size:.97rem;outline:none;
+          box-sizing:border-box;transition:border-color .2s;margin-bottom:.75rem;"
+        onfocus="this.style.borderColor='#2196f3'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')testIAConnection()">
+
+      <!-- Status -->
+      <div id="ia-test-result" style="font-size:.88rem;min-height:1.4rem;margin-bottom:1rem;"></div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:.75rem;">
+        <button onclick="testIAConnection()" style="
+          flex:1;padding:.8em;border-radius:12px;border:none;cursor:pointer;
+          font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;
+          background:linear-gradient(135deg,#2196f3,#9c27b0);color:#fff;
+          box-shadow:0 4px 18px rgba(33,150,243,.3);transition:all .2s;">
+          ✅ Conectar
+        </button>
+        <button onclick="clearIAConfig()" style="
+          padding:.8em 1.2em;border-radius:12px;cursor:pointer;
+          font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;
+          background:transparent;color:var(--muted);border:1px solid var(--border);">
+          🗑️ Borrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openIAConfig() {
+  const modal = document.getElementById('ia-config-modal');
+  modal.style.display = 'flex';
+  const saved = getWorkerUrl();
+  document.getElementById('ia-url-input').value = saved;
+  document.getElementById('ia-test-result').innerHTML = saved
+    ? '<span style="color:#4caf50;">✅ URL guardada: ' + saved + '</span>'
+    : '';
+  updateIABadge();
+}
+
+function closeIAConfig() {
+  document.getElementById('ia-config-modal').style.display = 'none';
+}
+
+function clearIAConfig() {
+  localStorage.removeItem('ecolombia_worker_url');
+  document.getElementById('ia-url-input').value = '';
+  document.getElementById('ia-test-result').innerHTML = '<span style="color:var(--muted);">URL eliminada.</span>';
+  updateIABadge();
+}
+
+function updateIABadge() {
+  const btn = document.getElementById('ia-config-btn');
+  if (!btn) return;
+  const url = getWorkerUrl();
+  if (url) {
+    btn.style.borderColor = '#4caf50';
+    btn.style.color = '#4caf50';
+    btn.textContent = '⚡ IA ✓';
+  } else {
+    btn.style.borderColor = 'rgba(255,255,255,.15)';
+    btn.style.color = 'var(--muted)';
+    btn.textContent = '⚙️ IA';
+  }
+}
+
+async function testIAConnection() {
+  const input = document.getElementById('ia-url-input');
+  const result = document.getElementById('ia-test-result');
+  const url = input.value.trim().replace(/\/+$/, '');
+
+  if (!url || !url.startsWith('https://')) {
+    result.innerHTML = '<span style="color:#f44336;">⚠️ La URL debe comenzar con https://</span>';
+    return;
+  }
+
+  result.innerHTML = '<span style="color:var(--muted);">⏳ Probando conexión...</span>';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'di ok' }]
+      })
+    });
+    const data = await res.json();
+    if (data.content || data.id) {
+      saveWorkerUrl(url);
+      result.innerHTML = '<span style="color:#4caf50;">✅ ¡Conexión exitosa! IA activada.</span>';
+      updateIABadge();
+      setTimeout(() => closeIAConfig(), 1500);
+    } else {
+      result.innerHTML = '<span style="color:#f44336;">❌ Respuesta inesperada: ' + JSON.stringify(data).substring(0,80) + '</span>';
+    }
+  } catch(e) {
+    result.innerHTML = '<span style="color:#f44336;">❌ Error: ' + e.message + '</span>';
+  }
+}
+
+// Init badge on load
+document.addEventListener('DOMContentLoaded', updateIABadge);
+setTimeout(updateIABadge, 500);
 </script>
 </body>
 </html>
